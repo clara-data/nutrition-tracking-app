@@ -1,0 +1,10 @@
+### 1. DAILY INTAKE — Per Food (2026-03-27),,,,,,,,,
+food_name,usda_match,gram_weight,calories,protein,fat,carbohydrate,fiber,sodium,warning
+,,,,,,,,,
+,,,,,,,,,
+### 2. DAILY INTAKE — Totals (2026-03-27),,,,,,,,,
+date,calories,protein,fat,carbohydrate,fiber,sodium,,,
+,,,,,,,,,
+,,,,,,,,,
+### 3. DIETARY RECOMMENDATIONS,,,,,,,,,
+nutrient,status,current,target,unit,gap,suggestion_1,suggestion_2,suggestion_3,
