@@ -18,6 +18,11 @@ from backend.dietary_advisor import get_llm_dietary_advice
 from backend.llm_client import call_meal_parser_llm, call_dietary_advice_llm
 
 st.set_page_config(page_title="Nutrition Tracker", layout="wide")
+##rbi
+
+
+
+##
 
 USER_DATA_FOLDER = APP_ROOT / "user_data"
 USER_DATA_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -52,7 +57,88 @@ def load_available_food_descriptions():
         .sort_values()
         .tolist()
     )
+##Mar 26 rbi
+@st.cache_data
+def load_food_pool():
+    food_data_loader.load()
+    return food_data_loader.get_pool().copy()
 
+@st.cache_data
+def load_food_portions():
+    return pd.read_csv(APP_ROOT / "USDA_data" / "food_portion.csv")
+
+#if st.button("DEBUG: show food pool columns"):
+#    df_debug = load_food_pool()
+#    st.write(df_debug.columns.tolist())
+#    st.write(df_debug.head())
+
+#if st.button("DEBUG: show food portion columns"):
+#    df_portion = load_food_portions()
+#    st.write(df_portion.columns.tolist())
+#    st.write(df_portion.head())
+
+
+def get_default_portion_for_food(food_name):
+    food_df = load_food_pool()
+    portion_df = load_food_portions()
+
+    matches = food_df[
+        food_df["food_description"].astype(str).str.strip() == str(food_name).strip()
+    ]
+
+    if matches.empty:
+        return {
+            "unit": "serving",
+            "portion_description": "1 serving",
+            "gram_weight": None,
+        }
+
+    food_id = matches.iloc[0]["food_id"]
+    portion_matches = portion_df[portion_df["food_id"] == food_id].copy()
+
+    if portion_matches.empty:
+        return {
+            "unit": "serving",
+            "portion_description": "1 serving",
+            "gram_weight": None,
+        }
+
+    if "seq_num" in portion_matches.columns:
+        portion_matches = portion_matches.sort_values("seq_num")
+
+    row = portion_matches.iloc[0]
+
+    amount = row["amount"] if pd.notna(row["amount"]) else 1
+
+    portion_description = None
+    if pd.notna(row["portion_description"]):
+        portion_description = str(row["portion_description"]).strip()
+        if portion_description == "":
+            portion_description = None
+
+    modifier = None
+    if pd.notna(row["modifier"]):
+        modifier = str(row["modifier"]).strip()
+        if modifier == "":
+            modifier = None
+
+    gram_weight = row["gram_weight"] if pd.notna(row["gram_weight"]) else None
+
+    if portion_description:
+        label = portion_description
+    elif modifier:
+        label = f"{amount} {modifier}"
+    else:
+        label = "1 serving"
+
+    return {
+        "unit": modifier if modifier else "serving",
+        "portion_description": label,
+        "gram_weight": gram_weight,
+    }
+
+
+##
 
 def csv_lines_to_df(lines):
     if not lines:
@@ -182,19 +268,70 @@ def clear_food_inputs_if_needed():
         st.session_state.clear_food_inputs = False
 
 
+#def add_food(food_name):
+#    for item in st.session_state.logged_food_items:
+#        if item["food_name"] == food_name:
+#            item["quantity"] += 1
+#           return
+
+#    st.session_state.logged_food_items.append(
+#        {
+#            "food_name": food_name,
+#            "quantity": 1,
+#        }
+#    )
+
+##rbi
+
 def add_food(food_name):
     for item in st.session_state.logged_food_items:
         if item["food_name"] == food_name:
             item["quantity"] += 1
             return
 
+    portion_info = get_default_portion_for_food(food_name)
+
     st.session_state.logged_food_items.append(
         {
             "food_name": food_name,
             "quantity": 1,
+            "unit": portion_info["unit"],
+            "portion_description": portion_info["portion_description"],
+            "gram_weight": portion_info["gram_weight"],
         }
     )
 
+##
+
+
+#def add_items_to_food_log(items):
+#    for new_item in items:
+#        food_name = str(new_item.get("food_name", "")).strip()
+#        quantity_raw = new_item.get("quantity", 1)
+
+#        if not food_name:
+#            continue
+
+#        try:
+#            quantity = int(quantity_raw)
+#        except Exception:
+#            quantity = 1
+
+#        quantity = max(quantity, 1)
+
+#        for existing in st.session_state.logged_food_items:
+#            if existing["food_name"] == food_name:
+#                existing["quantity"] += quantity
+#                break
+#        else:
+#            st.session_state.logged_food_items.append(
+#                {
+#                    "food_name": food_name,
+#                    "quantity": quantity,
+#                }
+#            )
+
+##rbi
 
 def add_items_to_food_log(items):
     for new_item in items:
@@ -216,13 +353,19 @@ def add_items_to_food_log(items):
                 existing["quantity"] += quantity
                 break
         else:
+            portion_info = get_default_portion_for_food(food_name)
+
             st.session_state.logged_food_items.append(
                 {
                     "food_name": food_name,
                     "quantity": quantity,
+                    "unit": portion_info["unit"],
+                    "portion_description": portion_info["portion_description"],
+                    "gram_weight": portion_info["gram_weight"],
                 }
             )
 
+##
 
 def save_food_log():
     pd.DataFrame(st.session_state.logged_food_items).to_csv(FOOD_LOG_CSV_PATH, index=False)
@@ -469,8 +612,16 @@ def render_logged_foods():
     for i, item in enumerate(st.session_state.logged_food_items):
         name_col, minus_col, qty_col, plus_col, remove_col = st.columns([4, 1, 1, 1, 1])
 
+        #with name_col:
+        #    st.markdown(f"**{item['food_name']}**")
+
+        
+    ##rbi    
         with name_col:
+            portion_text = item.get("portion_description") or item.get("unit") or "serving"
             st.markdown(f"**{item['food_name']}**")
+            st.caption(f"{item['quantity']} × {portion_text}")
+    ##
 
         with minus_col:
             minus = st.button("-", key=f"minus_{i}")
