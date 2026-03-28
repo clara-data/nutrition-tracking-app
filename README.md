@@ -35,3 +35,7 @@ ollama pull llama3
 - The application runs locally.
 - USDA data should be placed in the USDA_data/ folder.
 - The LLM-related functions require Ollama to be installed.
+
+# Demo Video
+A short demo of the application is available here:
+https://drive.google.com/file/d/1MrvP3K0Chuo4MWJ2Y0FZb1FcKPWQoDsI/view?usp=sharing
